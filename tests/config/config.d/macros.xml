@@ -3,6 +3,7 @@
         <test>Hello, world!</test>
         <shard>s1</shard>
         <replica>r1</replica>
+        <default_cluster>test_shard_localhost</default_cluster>
         <default_path_test>/clickhouse/tables/{database}/{shard}/</default_path_test>
         <default_name_test>table_{table}</default_name_test>
     </macros>
