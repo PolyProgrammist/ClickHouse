@@ -116,9 +116,6 @@
             </shard>
         </test_shard_localhost_secure>
     </remote_servers>
-    <macros>
-        <default_cluster_macro>test_shard_localhost</default_cluster_macro>
-    </macros>
     <include_from/>
     <zookeeper incl="zookeeper-servers" optional="true" />
     <macros incl="macros" optional="true" />
