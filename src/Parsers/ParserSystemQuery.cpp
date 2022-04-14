@@ -5,6 +5,7 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/parseDatabaseAndTableName.h>
+#include <base/logger_useful.h>
 
 #include <magic_enum.hpp>
 #include <base/EnumReflection.h>
@@ -354,6 +355,20 @@ bool ParserSystemQuery::parseImpl(IParser::Pos & pos, ASTPtr & node, Expected & 
                 res->filesystem_cache_path = ast->as<ASTLiteral>()->value.safeGet<String>();
             if (ParserKeyword{"FORCE"}.ignore(pos, expected))
                 res->force_removal = true;
+            break;
+        }
+
+        case Type::UNFREEZE:
+        {
+            ASTPtr ast;
+            if (!parseDatabaseAndTableAsAST(pos, expected, res->database, res->table))
+                return false;
+            if (ParserKeyword{"WITH NAME"}.ignore(pos, expected) && ParserIdentifier{}.parse(pos, ast, expected))
+            {
+                res->backup_name = ast->as<ASTIdentifier &>().name();
+            } else {
+                return false;
+            }
             break;
         }
 

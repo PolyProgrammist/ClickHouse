@@ -479,6 +479,34 @@ BlockIO InterpreterSystemQuery::execute()
             getContext()->checkAccess(AccessType::SYSTEM_THREAD_FUZZER);
             ThreadFuzzer::start();
             break;
+        case Type::UNFREEZE:
+        {
+                // auto lock = lockForShare(query_context->getCurrentQueryId(), query_context->getSettingsRef().lock_acquire_timeout);
+                // current_command_results = unfreezeAll(command.with_name, query_context, lock);
+
+
+                
+
+                // // table_id
+                StorageID storageID(query.getDatabase(), query.getTable());
+                auto table_id = getContext()->resolveStorageID(storageID, Context::ResolveOrdinary);
+
+                // // partition_commands
+                PartitionCommands partition_commands;
+                PartitionCommand partition_command;
+                partition_command.type = PartitionCommand::UNFREEZE_ALL_PARTITIONS;
+                partition_command.with_name = query.backup_name;
+                partition_commands.emplace_back(partition_command);
+
+                // // metadata_snapshot
+                // ....
+                
+                StoragePtr table = DatabaseCatalog::instance().getTable(table_id, getContext());
+                auto metadata_snapshot = table->getInMemoryMetadataPtr();
+                table->alterPartition(metadata_snapshot, partition_commands, getContext());
+            LOG_ERROR(&Poco::Logger::get("AwesomeClass"), "Unfreezing{}", "b");
+            break;
+        }
         default:
             throw Exception("Unknown type of SYSTEM query", ErrorCodes::BAD_ARGUMENTS);
     }
@@ -920,6 +948,11 @@ AccessRightsElements InterpreterSystemQuery::getRequiredAccessForDDLOnCluster() 
         case Type::START_LISTEN_QUERIES: break;
         case Type::STOP_THREAD_FUZZER: break;
         case Type::START_THREAD_FUZZER: break;
+        case Type::UNFREEZE: 
+        {
+            LOG_ERROR(&Poco::Logger::get("AwesomeClass"), "getrequiredlalal{}", "b");
+            exit(0);
+        }
         case Type::UNKNOWN: break;
         case Type::END: break;
     }

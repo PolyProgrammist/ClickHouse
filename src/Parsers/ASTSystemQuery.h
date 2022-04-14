@@ -64,6 +64,7 @@ public:
         START_DISTRIBUTED_SENDS,
         START_THREAD_FUZZER,
         STOP_THREAD_FUZZER,
+        UNFREEZE,
         END
     };
 
@@ -93,6 +94,7 @@ public:
     /// Values for `drop filesystem cache` system query.
     String filesystem_cache_path;
     bool force_removal = false;
+    String backup_name;
 
     String getID(char) const override { return "SYSTEM query"; }
 
