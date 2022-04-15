@@ -5939,7 +5939,7 @@ PartitionCommandsResultInfo MergeTreeData::unfreezePartition(
     ContextPtr local_context,
     TableLockHolder &)
 {
-    return unfreezePartitionsByMatcher(getPartitionMatcher(partition, local_context), backup_name, local_context, relative_data_path);
+    return unfreezePartitionsByMatcher(getPartitionMatcher(partition, local_context), backup_name, local_context);
 }
 
 PartitionCommandsResultInfo MergeTreeData::unfreezeAll(
@@ -5947,7 +5947,7 @@ PartitionCommandsResultInfo MergeTreeData::unfreezeAll(
     ContextPtr local_context,
     TableLockHolder &)
 {
-    return unfreezePartitionsByMatcher([] (const String &) { return true; }, backup_name, local_context, relative_data_path);
+    return unfreezePartitionsByMatcher([] (const String &) { return true; }, backup_name, local_context);
 }
 
 bool MergeTreeData::removeDetachedPart(DiskPtr disk, const String & path, const String &, bool)
@@ -5957,20 +5957,22 @@ bool MergeTreeData::removeDetachedPart(DiskPtr disk, const String & path, const 
     return false;
 }
 
-PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn matcher, const String & backup_name, ContextPtr, String table_path)
+bool removeDetachedPart(DiskPtr disk, const String & path, const String &, bool)
 {
-    auto backup_path = fs::path("shadow") / escapeForFileName(backup_name) / table_path;
+    disk->removeRecursive(path);
 
-    LOG_DEBUG(log, "Unfreezing parts by path {}", backup_path.generic_string());
+    return false;
+}
 
+PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, Poco::Logger * log) {
     PartitionCommandsResultInfo result;
 
-    for (const auto & disk : getStoragePolicy()->getDisks())
+    for (const auto & disk : disks)
     {
-        if (!disk->exists(backup_path))
+        if (!disk->exists(table_directory))
             continue;
 
-        for (auto it = disk->iterateDirectory(backup_path); it->isValid(); it->next())
+        for (auto it = disk->iterateDirectory(table_directory); it->isValid(); it->next())
         {
             const auto & partition_directory = it->name();
 
@@ -5985,12 +5987,12 @@ PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn
 
             const auto & path = it->path();
 
-            bool keep_shared = removeDetachedPart(disk, path, partition_directory, true);
+            bool keep_shared = DB::removeDetachedPart(disk, path, partition_directory, true);
 
             result.push_back(PartitionCommandResultInfo{
                 .partition_id = partition_id,
                 .part_name = partition_directory,
-                .backup_path = disk->getPath() + backup_path.generic_string(),
+                .backup_path = disk->getPath() + table_directory.generic_string(),
                 .part_backup_path = disk->getPath() + path,
                 .backup_name = backup_name,
             });
@@ -6002,6 +6004,17 @@ PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn
     LOG_DEBUG(log, "Unfreezed {} parts", result.size());
 
     return result;
+}
+
+PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn matcher, const String & backup_name, ContextPtr)
+{
+    auto backup_path = fs::path("shadow") / escapeForFileName(backup_name) / relative_data_path;
+
+    LOG_DEBUG(log, "Unfreezing parts by path {}", backup_path.generic_string());
+
+    auto disks = getStoragePolicy()->getDisks();
+
+    return unfreezePartitionsFromTableDirectory(matcher, backup_name, disks, backup_path, log);
 }
 
 bool MergeTreeData::canReplacePartition(const DataPartPtr & src_part) const
