@@ -463,12 +463,27 @@ BlockIO InterpreterSystemQuery::execute()
                 // auto lock = lockForShare(query_context->getCurrentQueryId(), query_context->getSettingsRef().lock_acquire_timeout);
                 // current_command_results = unfreezeAll(command.with_name, query_context, lock);
 
-                auto disks = getContext()->getDisksMap();
+                auto disksMap = getContext()->getDisksMap();
+                Disks disks;
+                for (auto& [name, disk]: disksMap) {
+                    disks.push_back(disk);
+                }
                 auto backup_path = fs::path("shadow") / escapeForFileName(query.backup_name);
+                auto store_path = backup_path / "store";
 
-                for (auto& [name, disk]: disks) {
-                    if (!disk->exists(backup_path))
+                for (auto disk: disks) {
+                    if (!disk->exists(store_path))
                         continue;
+                    for (auto it = disk->iterateDirectory(store_path); it->isValid(); it->next()) {
+                        const auto & prefix_directory = it->name();
+                        auto absolute_prefix_directory = store_path / prefix_directory;
+                        for (auto it = disk->iterateDirectory(absolute_prefix_directory); it->isValid(); it->next()) {
+                            const auto & table_directory = it->name();
+                            auto absolute_table_directory = absolute_prefix_directory / table_directory;
+                            // unfreezeAll(absolute_table_directory);
+                            MergeTreeData::unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, absolute_table_directory, &Poco::Logger::get("AwesomeClass"));
+                        }
+                    }
                     disk->removeRecursive(backup_path);
 
                     // for (auto it = disk->iterateDirectory(backup_path); it->isValid(); it->next()) {
