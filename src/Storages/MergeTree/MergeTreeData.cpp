@@ -5957,14 +5957,52 @@ bool MergeTreeData::removeDetachedPart(DiskPtr disk, const String & path, const 
     return false;
 }
 
-bool removeDetachedPart(DiskPtr disk, const String & path, const String &, bool)
+bool removeSharedDetachedPart(DiskPtr disk, const String & path, const String & part_name, const String & table_uuid,
+    const String &, const String & detached_replica_name, const String & detached_zookeeper_path, Poco::Logger * log, ContextPtr local_context)
 {
+    bool keep_shared = false;
+
+    zkutil::ZooKeeperPtr zookeeper = local_context->getZooKeeper();
+
+    fs::path checksums = fs::path(path) / IMergeTreeDataPart::FILE_FOR_REFERENCES_CHECK;
+    if (disk->exists(checksums))
+    {
+        if (disk->getRefCount(checksums) == 0)
+        {
+            String id = disk->getUniqueId(checksums);
+            keep_shared = !StorageReplicatedMergeTree::unlockSharedDataByID(id, table_uuid, part_name,
+                detached_replica_name, disk, zookeeper, local_context->getReplicatedMergeTreeSettings(), log,
+                detached_zookeeper_path);
+        }
+        else
+            keep_shared = true;
+    }
+
+    disk->removeSharedRecursive(path, keep_shared);
+
+    return keep_shared;
+}
+
+bool removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, Poco::Logger * log, ContextPtr local_context)
+{
+    if (disk->supportZeroCopyReplication())
+    {
+        FreezeMetaData meta;
+        if (meta.load(disk, path))
+        {
+            if (meta.is_replicated) {
+                FreezeMetaData::clean(disk, path);
+                return removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", log, local_context);
+            }
+        }
+    }
+
     disk->removeRecursive(path);
 
     return false;
 }
 
-PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, Poco::Logger * log) {
+PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, Poco::Logger * log, ContextPtr local_context) {
     PartitionCommandsResultInfo result;
 
     for (const auto & disk : disks)
@@ -5987,7 +6025,7 @@ PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsFromTableDirectory(
 
             const auto & path = it->path();
 
-            bool keep_shared = DB::removeDetachedPart(disk, path, partition_directory, true);
+            bool keep_shared = DB::removeDetachedPart(disk, path, partition_directory, true, log, local_context);
 
             result.push_back(PartitionCommandResultInfo{
                 .partition_id = partition_id,
@@ -6006,7 +6044,7 @@ PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsFromTableDirectory(
     return result;
 }
 
-PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn matcher, const String & backup_name, ContextPtr)
+PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn matcher, const String & backup_name, ContextPtr local_context)
 {
     auto backup_path = fs::path("shadow") / escapeForFileName(backup_name) / relative_data_path;
 
@@ -6014,7 +6052,7 @@ PartitionCommandsResultInfo MergeTreeData::unfreezePartitionsByMatcher(MatcherFn
 
     auto disks = getStoragePolicy()->getDisks();
 
-    return unfreezePartitionsFromTableDirectory(matcher, backup_name, disks, backup_path, log);
+    return unfreezePartitionsFromTableDirectory(matcher, backup_name, disks, backup_path, log, local_context);
 }
 
 bool MergeTreeData::canReplacePartition(const DataPartPtr & src_part) const
