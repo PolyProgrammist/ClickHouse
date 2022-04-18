@@ -502,7 +502,7 @@ BlockIO InterpreterSystemQuery::execute()
                             const auto & table_directory = it->name();
                             auto absolute_table_directory = absolute_prefix_directory / table_directory;
                             // unfreezeAll(absolute_table_directory);
-                            MergeTreeData::unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, absolute_table_directory, &Poco::Logger::get("AwesomeClass"));
+                            MergeTreeData::unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, absolute_table_directory, &Poco::Logger::get("AwesomeClass"), getContext());
                         }
                     }
                     disk->removeRecursive(backup_path);
