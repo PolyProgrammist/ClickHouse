@@ -839,6 +839,7 @@ String getPartNamePossiblyFake(MergeTreeDataFormatVersion format_version, const 
 /// NOLINTNEXTLINE
 #define MAX_AGE_OF_LOCAL_PART_THAT_WASNT_ADDED_TO_ZOOKEEPER (5 * 60)
 
+// for review - just plain copy from StorageReplicatedMergeTree.cpp
 
 /// Special metadata used during freeze table. Required for zero-copy
 /// replication.
