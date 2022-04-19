@@ -412,7 +412,7 @@ def wait_mutations(node, table, seconds):
     assert mutations == "0\n"
 
 
-def test_s3_zero_copy_unfreeze(cluster):
+def s3_zero_copy_unfreeze_base(cluster, unfreeze_query_template):
     node1 = cluster.instances["node1"]
     node2 = cluster.instances["node2"]
 
@@ -455,18 +455,26 @@ def test_s3_zero_copy_unfreeze(cluster):
 
     check_objects_exisis(cluster, objects11)
 
-    node1.query("ALTER TABLE unfreeze_test UNFREEZE WITH NAME 'freeze_backup1'")
+    node1.query(f"{unfreeze_query_template} 'freeze_backup1'")
     wait_mutations(node1, "unfreeze_test", 10)
 
     check_objects_exisis(cluster, objects12)
 
-    node2.query("ALTER TABLE unfreeze_test UNFREEZE WITH NAME 'freeze_backup2'")
+    node2.query(f"{unfreeze_query_template} 'freeze_backup2'")
     wait_mutations(node2, "unfreeze_test", 10)
 
     check_objects_not_exisis(cluster, objects12)
 
     node1.query("DROP TABLE IF EXISTS unfreeze_test NO DELAY")
     node2.query("DROP TABLE IF EXISTS unfreeze_test NO DELAY")
+
+
+def test_s3_zero_copy_unfreeze_alter(cluster):
+    s3_zero_copy_unfreeze_base(cluster, "ALTER TABLE unfreeze_test UNFREEZE WITH NAME")
+
+
+def test_s3_zero_copy_unfreeze_system(cluster):
+    s3_zero_copy_unfreeze_base(cluster, "SYSTEM UNFREEZE WITH NAME")
 
 
 def test_s3_zero_copy_drop_detached(cluster):
