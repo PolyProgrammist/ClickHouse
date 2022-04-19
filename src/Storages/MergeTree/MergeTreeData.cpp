@@ -6017,6 +6017,7 @@ bool MergeTreeData::removeDetachedPart(DiskPtr disk, const String & path, const 
     return false;
 }
 
+// copy and some edits from StorageReplicatedMergeTree::removeSharedDetachedPart
 bool removeSharedDetachedPart(DiskPtr disk, const String & path, const String & part_name, const String & table_uuid,
     const String &, const String & detached_replica_name, const String & detached_zookeeper_path, Poco::Logger * log, ContextPtr local_context)
 {
@@ -6043,6 +6044,7 @@ bool removeSharedDetachedPart(DiskPtr disk, const String & path, const String & 
     return keep_shared;
 }
 
+// copy and some edits from StorageReplicatedMergeTree::removeDetachedPart
 bool removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, Poco::Logger * log, ContextPtr local_context)
 {
     if (disk->supportZeroCopyReplication())

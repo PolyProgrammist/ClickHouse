@@ -481,9 +481,6 @@ BlockIO InterpreterSystemQuery::execute()
             break;
         case Type::UNFREEZE:
         {
-                // auto lock = lockForShare(query_context->getCurrentQueryId(), query_context->getSettingsRef().lock_acquire_timeout);
-                // current_command_results = unfreezeAll(command.with_name, query_context, lock);
-
                 auto disksMap = getContext()->getDisksMap();
                 Disks disks;
                 for (auto& [name, disk]: disksMap) {
@@ -501,35 +498,12 @@ BlockIO InterpreterSystemQuery::execute()
                         for (auto it = disk->iterateDirectory(absolute_prefix_directory); it->isValid(); it->next()) {
                             const auto & table_directory = it->name();
                             auto absolute_table_directory = absolute_prefix_directory / table_directory;
-                            // unfreezeAll(absolute_table_directory);
                             MergeTreeData::unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, absolute_table_directory, &Poco::Logger::get("AwesomeClass"), getContext());
                         }
                     }
                     disk->removeRecursive(backup_path);
-
-                    // for (auto it = disk->iterateDirectory(backup_path); it->isValid(); it->next()) {
-                        // auto dirname = it->name();
-                    // }
                 }
                 
-
-                // // // table_id
-                // StorageID storageID(query.getDatabase(), query.getTable());
-                // auto table_id = getContext()->resolveStorageID(storageID, Context::ResolveOrdinary);
-
-                // // // partition_commands
-                // PartitionCommands partition_commands;
-                // PartitionCommand partition_command;
-                // partition_command.type = PartitionCommand::UNFREEZE_ALL_PARTITIONS;
-                // partition_command.with_name = query.backup_name;
-                // partition_commands.emplace_back(partition_command);
-
-                // // // metadata_snapshot
-                // // ....
-                
-                // StoragePtr table = DatabaseCatalog::instance().getTable(table_id, getContext());
-                // auto metadata_snapshot = table->getInMemoryMetadataPtr();
-                // table->alterPartition(metadata_snapshot, partition_commands, getContext());
             LOG_ERROR(&Poco::Logger::get("AwesomeClass"), "Unfreezing{}", "b");
             break;
         }
