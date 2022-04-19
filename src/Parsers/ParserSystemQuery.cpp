@@ -351,8 +351,6 @@ bool ParserSystemQuery::parseImpl(IParser::Pos & pos, ASTPtr & node, Expected & 
         case Type::UNFREEZE:
         {
             ASTPtr ast;
-            if (!parseDatabaseAndTableAsAST(pos, expected, res->database, res->table))
-                return false;
             if (ParserKeyword{"WITH NAME"}.ignore(pos, expected) && ParserIdentifier{}.parse(pos, ast, expected))
             {
                 res->backup_name = ast->as<ASTIdentifier &>().name();
