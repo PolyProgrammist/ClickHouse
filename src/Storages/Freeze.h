@@ -1,3 +1,5 @@
+#pragma once
+
 #include <Storages/StorageReplicatedMergeTree.h>
 #include <Storages/MergeTree/MergeTreeData.h>
 
@@ -32,12 +34,9 @@ public:
 class Unfreezer {
 public:
     PartitionCommandsResultInfo unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, ContextPtr local_context);
-
+    void unfreeze(const String& backup_name, ContextPtr local_context);
 private:
-    bool removeSharedDetachedPart(DiskPtr disk, const String & path, const String & part_name, const String & table_uuid,
-        const String &, const String & detached_replica_name, const String & detached_zookeeper_path, ContextPtr local_context);
-
-    bool removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context);
+    bool removeFreezedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context);
 };
 
 }

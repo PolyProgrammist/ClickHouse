@@ -1,5 +1,8 @@
 #include <Storages/Freeze.h>
 
+#include <Common/escapeForFileName.h>
+#include <base/logger_useful.h>
+
 namespace DB 
 {
 void FreezeMetaData::fill(const StorageReplicatedMergeTree & storage)
@@ -70,33 +73,33 @@ String FreezeMetaData::getFileName(const String & path)
     return fs::path(path) / "frozen_metadata.txt";
 }
 
-bool Unfreezer::removeSharedDetachedPart(DiskPtr disk, const String & path, const String & part_name, const String & table_uuid,
-        const String &, const String & detached_replica_name, const String & detached_zookeeper_path, ContextPtr local_context)
-{
-    bool keep_shared = false;
-
-    zkutil::ZooKeeperPtr zookeeper = local_context->getZooKeeper();
-
-    fs::path checksums = fs::path(path) / IMergeTreeDataPart::FILE_FOR_REFERENCES_CHECK;
-    if (disk->exists(checksums))
-    {
-        if (disk->getRefCount(checksums) == 0)
-        {
-            String id = disk->getUniqueId(checksums);
-            keep_shared = !StorageReplicatedMergeTree::unlockSharedDataByID(id, table_uuid, part_name,
-                detached_replica_name, disk, zookeeper, local_context->getReplicatedMergeTreeSettings(), &Poco::Logger::get("Unfreezer"),
-                detached_zookeeper_path);
-        }
-        else
-            keep_shared = true;
+void Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context) {
+    LOG_DEBUG(&Poco::Logger::get("Unfreezer"), "Unfreezing backup {}", backup_name);
+    auto disksMap = local_context->getDisksMap();
+    Disks disks;
+    for (auto& [name, disk]: disksMap) {
+        disks.push_back(disk);
     }
+    auto backup_path = fs::path("shadow") / escapeForFileName(backup_name);
+    auto store_path = backup_path / "store";
 
-    disk->removeSharedRecursive(path, keep_shared);
-
-    return keep_shared;
+    for (auto disk: disks) {
+        if (!disk->exists(store_path))
+            continue;
+        for (auto prefix_it = disk->iterateDirectory(store_path); prefix_it->isValid(); prefix_it->next()) {
+            auto prefix_directory = store_path / prefix_it->name();
+            for (auto table_it = disk->iterateDirectory(prefix_directory); table_it->isValid(); table_it->next()) {
+                auto table_directory = prefix_directory / table_it->name();
+                unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, backup_name, disks, table_directory, local_context);
+            }
+        }
+        if (disk->exists(backup_path)) {
+            disk->removeRecursive(backup_path);
+        }
+    }
 }
 
-bool Unfreezer::removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context)
+bool Unfreezer::removeFreezedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context)
 {
     if (disk->supportZeroCopyReplication())
     {
@@ -105,7 +108,7 @@ bool Unfreezer::removeDetachedPart(DiskPtr disk, const String & path, const Stri
         {
             if (meta.is_replicated) {
                 FreezeMetaData::clean(disk, path);
-                return removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", local_context);
+                return StorageReplicatedMergeTree::removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", local_context);
             }
         }
     }
@@ -138,7 +141,7 @@ PartitionCommandsResultInfo Unfreezer::unfreezePartitionsFromTableDirectory(Merg
 
             const auto & path = it->path();
 
-            bool keep_shared = removeDetachedPart(disk, path, partition_directory, true, local_context);
+            bool keep_shared = removeFreezedPart(disk, path, partition_directory, true, local_context);
 
             result.push_back(PartitionCommandResultInfo{
                 .partition_id = partition_id,
