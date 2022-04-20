@@ -477,7 +477,7 @@ def test_s3_zero_copy_unfreeze_system(cluster):
     s3_zero_copy_unfreeze_base(cluster, "SYSTEM UNFREEZE WITH NAME")
 
 
-def test_s3_zero_copy_drop_detached(cluster):
+def s3_zero_copy_drop_detached(cluster, unfreeze_query_template):
     node1 = cluster.instances["node1"]
     node2 = cluster.instances["node2"]
 
@@ -506,8 +506,8 @@ def test_s3_zero_copy_drop_detached(cluster):
 
     objects_diff = list(set(objects2) - set(objects1))
 
-    node1.query("ALTER TABLE drop_detached_test UNFREEZE WITH NAME 'detach_backup2'")
-    node1.query("ALTER TABLE drop_detached_test UNFREEZE WITH NAME 'detach_backup1'")
+    node1.query(f"{unfreeze_query_template} 'detach_backup2'")
+    node1.query(f"{unfreeze_query_template} 'detach_backup1'")
 
     node1.query("ALTER TABLE drop_detached_test DETACH PARTITION '0'")
     node1.query("ALTER TABLE drop_detached_test DETACH PARTITION '1'")
@@ -560,6 +560,14 @@ def test_s3_zero_copy_drop_detached(cluster):
     wait_mutations(node2, "drop_detached_test", 10)
 
     check_objects_not_exisis(cluster, objects1)
+
+
+def test_s3_zero_copy_drop_detached_alter(cluster):
+    s3_zero_copy_drop_detached(cluster, "ALTER TABLE drop_detached_test UNFREEZE WITH NAME")
+
+
+def test_s3_zero_copy_drop_detached_system(cluster):
+    s3_zero_copy_drop_detached(cluster, "SYSTEM UNFREEZE WITH NAME")
 
 
 def test_s3_zero_copy_concurrent_merge(cluster):
