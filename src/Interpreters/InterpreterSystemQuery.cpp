@@ -481,6 +481,7 @@ BlockIO InterpreterSystemQuery::execute()
             break;
         case Type::UNFREEZE:
         {
+            getContext()->checkAccess(AccessType::SYSTEM_UNFREEZE);
             LOG_DEBUG(log, "Unfreezing backup {}", query.backup_name);
             auto disksMap = getContext()->getDisksMap();
             Disks disks;
