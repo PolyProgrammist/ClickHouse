@@ -5,7 +5,6 @@
 #include <Parsers/ASTIdentifier.h>
 #include <Parsers/ASTLiteral.h>
 #include <Parsers/parseDatabaseAndTableName.h>
-#include <base/logger_useful.h>
 
 #include <magic_enum.hpp>
 #include <base/EnumReflection.h>
