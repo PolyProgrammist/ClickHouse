@@ -483,29 +483,7 @@ BlockIO InterpreterSystemQuery::execute()
         case Type::UNFREEZE:
         {
             getContext()->checkAccess(AccessType::SYSTEM_UNFREEZE);
-            LOG_DEBUG(log, "Unfreezing backup {}", query.backup_name);
-            auto disksMap = getContext()->getDisksMap();
-            Disks disks;
-            for (auto& [name, disk]: disksMap) {
-                disks.push_back(disk);
-            }
-            auto backup_path = fs::path("shadow") / escapeForFileName(query.backup_name);
-            auto store_path = backup_path / "store";
-
-            for (auto disk: disks) {
-                if (!disk->exists(store_path))
-                    continue;
-                for (auto it = disk->iterateDirectory(store_path); it->isValid(); it->next()) {
-                    auto prefix_directory = store_path / it->name();
-                    for (auto it = disk->iterateDirectory(prefix_directory); it->isValid(); it->next()) {
-                        auto table_directory = prefix_directory / it->name();
-                        Unfreezer().unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, table_directory, getContext());
-                    }
-                }
-                if (disk->exists(backup_path)) {
-                    disk->removeRecursive(backup_path);
-                }
-            }
+            Unfreezer().unfreeze(query.backup_name, getContext());
             break;
         }
         default:
