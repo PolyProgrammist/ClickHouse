@@ -971,8 +971,6 @@ public:
     /// Used for freezePartitionsByMatcher and unfreezePartitionsByMatcher
     using MatcherFn = std::function<bool(const String &)>;
 
-    static PartitionCommandsResultInfo unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, Poco::Logger * log, ContextPtr context);
-
 protected:
     friend class IMergeTreeDataPart;
     friend class MergeTreeDataMergerMutator;

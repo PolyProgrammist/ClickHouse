@@ -1,4 +1,5 @@
 #include <Storages/StorageReplicatedMergeTree.h>
+#include <Storages/MergeTree/MergeTreeData.h>
 
 namespace DB 
 {
@@ -27,5 +28,16 @@ public:
     String zookeeper_name;
     String table_shared_id;
 };
+
+class Unfreezer {
+public:
+    PartitionCommandsResultInfo unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, Poco::Logger * log, ContextPtr local_context);
+
+private:
+    bool removeSharedDetachedPart(DiskPtr disk, const String & path, const String & part_name, const String & table_uuid,
+        const String &, const String & detached_replica_name, const String & detached_zookeeper_path, Poco::Logger * log, ContextPtr local_context);
+
+    bool removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, Poco::Logger * log, ContextPtr local_context);
+}
 
 }

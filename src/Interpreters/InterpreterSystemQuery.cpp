@@ -40,6 +40,7 @@
 #include <Disks/DiskRestartProxy.h>
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageReplicatedMergeTree.h>
+#include <Storages/Unfreezer.h>
 #include <Storages/StorageFactory.h>
 #include <Parsers/ASTSystemQuery.h>
 #include <Parsers/ASTDropQuery.h>
@@ -498,7 +499,7 @@ BlockIO InterpreterSystemQuery::execute()
                     auto prefix_directory = store_path / it->name();
                     for (auto it = disk->iterateDirectory(prefix_directory); it->isValid(); it->next()) {
                         auto table_directory = prefix_directory / it->name();
-                        MergeTreeData::unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, table_directory, &Poco::Logger::get("AwesomeClass"), getContext());
+                        Unfreezer().unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, table_directory, getContext());
                     }
                 }
                 if (disk->exists(backup_path)) {
