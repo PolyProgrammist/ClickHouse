@@ -71,7 +71,7 @@ String FreezeMetaData::getFileName(const String & path)
 }
 
 bool Unfreezer::removeSharedDetachedPart(DiskPtr disk, const String & path, const String & part_name, const String & table_uuid,
-        const String &, const String & detached_replica_name, const String & detached_zookeeper_path, Poco::Logger * log, ContextPtr local_context)
+        const String &, const String & detached_replica_name, const String & detached_zookeeper_path, ContextPtr local_context)
 {
     bool keep_shared = false;
 
@@ -84,7 +84,7 @@ bool Unfreezer::removeSharedDetachedPart(DiskPtr disk, const String & path, cons
         {
             String id = disk->getUniqueId(checksums);
             keep_shared = !StorageReplicatedMergeTree::unlockSharedDataByID(id, table_uuid, part_name,
-                detached_replica_name, disk, zookeeper, local_context->getReplicatedMergeTreeSettings(), log,
+                detached_replica_name, disk, zookeeper, local_context->getReplicatedMergeTreeSettings(), &Poco::Logger::get("Unfreezer"),
                 detached_zookeeper_path);
         }
         else
@@ -96,7 +96,7 @@ bool Unfreezer::removeSharedDetachedPart(DiskPtr disk, const String & path, cons
     return keep_shared;
 }
 
-bool Unfreezer::removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, Poco::Logger * log, ContextPtr local_context)
+bool Unfreezer::removeDetachedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context)
 {
     if (disk->supportZeroCopyReplication())
     {
@@ -105,7 +105,7 @@ bool Unfreezer::removeDetachedPart(DiskPtr disk, const String & path, const Stri
         {
             if (meta.is_replicated) {
                 FreezeMetaData::clean(disk, path);
-                return removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", log, local_context);
+                return removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", local_context);
             }
         }
     }
@@ -138,7 +138,7 @@ PartitionCommandsResultInfo Unfreezer::unfreezePartitionsFromTableDirectory(Merg
 
             const auto & path = it->path();
 
-            bool keep_shared = DB::removeDetachedPart(disk, path, partition_directory, true, log, local_context);
+            bool keep_shared = removeDetachedPart(disk, path, partition_directory, true, local_context);
 
             result.push_back(PartitionCommandResultInfo{
                 .partition_id = partition_id,

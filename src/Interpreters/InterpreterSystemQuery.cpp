@@ -40,7 +40,7 @@
 #include <Disks/DiskRestartProxy.h>
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageReplicatedMergeTree.h>
-#include <Storages/Unfreezer.h>
+#include <Storages/Freeze.h>
 #include <Storages/StorageFactory.h>
 #include <Parsers/ASTSystemQuery.h>
 #include <Parsers/ASTDropQuery.h>
