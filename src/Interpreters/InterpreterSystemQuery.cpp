@@ -40,6 +40,7 @@
 #include <Disks/DiskRestartProxy.h>
 #include <Storages/StorageDistributed.h>
 #include <Storages/StorageReplicatedMergeTree.h>
+#include <Storages/Freeze.h>
 #include <Storages/StorageFactory.h>
 #include <Parsers/ASTSystemQuery.h>
 #include <Parsers/ASTDropQuery.h>
@@ -481,30 +482,30 @@ BlockIO InterpreterSystemQuery::execute()
             break;
         case Type::UNFREEZE:
         {
-                auto disksMap = getContext()->getDisksMap();
-                Disks disks;
-                for (auto& [name, disk]: disksMap) {
-                    disks.push_back(disk);
-                }
-                auto backup_path = fs::path("shadow") / escapeForFileName(query.backup_name);
-                auto store_path = backup_path / "store";
+            getContext()->checkAccess(AccessType::SYSTEM_UNFREEZE);
+            LOG_DEBUG(log, "Unfreezing backup {}", query.backup_name);
+            auto disksMap = getContext()->getDisksMap();
+            Disks disks;
+            for (auto& [name, disk]: disksMap) {
+                disks.push_back(disk);
+            }
+            auto backup_path = fs::path("shadow") / escapeForFileName(query.backup_name);
+            auto store_path = backup_path / "store";
 
-                for (auto disk: disks) {
-                    if (!disk->exists(store_path))
-                        continue;
-                    for (auto it = disk->iterateDirectory(store_path); it->isValid(); it->next()) {
-                        const auto & prefix_directory = it->name();
-                        auto absolute_prefix_directory = store_path / prefix_directory;
-                        for (auto it = disk->iterateDirectory(absolute_prefix_directory); it->isValid(); it->next()) {
-                            const auto & table_directory = it->name();
-                            auto absolute_table_directory = absolute_prefix_directory / table_directory;
-                            MergeTreeData::unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, absolute_table_directory, &Poco::Logger::get("AwesomeClass"), getContext());
-                        }
+            for (auto disk: disks) {
+                if (!disk->exists(store_path))
+                    continue;
+                for (auto it = disk->iterateDirectory(store_path); it->isValid(); it->next()) {
+                    auto prefix_directory = store_path / it->name();
+                    for (auto it = disk->iterateDirectory(prefix_directory); it->isValid(); it->next()) {
+                        auto table_directory = prefix_directory / it->name();
+                        Unfreezer().unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, query.backup_name, disks, table_directory, getContext());
                     }
+                }
+                if (disk->exists(backup_path)) {
                     disk->removeRecursive(backup_path);
                 }
-                
-            LOG_ERROR(&Poco::Logger::get("AwesomeClass"), "Unfreezing{}", "b");
+            }
             break;
         }
         default:
@@ -950,8 +951,8 @@ AccessRightsElements InterpreterSystemQuery::getRequiredAccessForDDLOnCluster() 
         case Type::START_THREAD_FUZZER: break;
         case Type::UNFREEZE: 
         {
-            LOG_ERROR(&Poco::Logger::get("AwesomeClass"), "getrequiredlalal{}", "b");
-            exit(0);
+            required_access.emplace_back(AccessType::SYSTEM_UNFREEZE);
+            break;
         }
         case Type::UNKNOWN: break;
         case Type::END: break;

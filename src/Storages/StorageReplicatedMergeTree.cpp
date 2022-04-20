@@ -34,6 +34,7 @@
 #include <Storages/MergeTree/MergeTreeReaderCompact.h>
 #include <Storages/MergeTree/LeaderElection.h>
 #include <Storages/MergeTree/ZeroCopyLock.h>
+#include <Storages/Freeze.h>
 
 
 #include <Databases/DatabaseOnDisk.h>
