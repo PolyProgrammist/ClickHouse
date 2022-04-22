@@ -229,6 +229,8 @@ BlockIO InterpreterSystemQuery::execute()
     }
 
 
+    BlockIO result;
+
     volume_ptr = {};
     if (!query.storage_policy.empty() && !query.volume.empty())
         volume_ptr = getContext()->getStoragePolicy(query.storage_policy)->getVolumeByName(query.volume);
@@ -483,14 +485,14 @@ BlockIO InterpreterSystemQuery::execute()
         case Type::UNFREEZE:
         {
             getContext()->checkAccess(AccessType::SYSTEM_UNFREEZE);
-            Unfreezer().unfreeze(query.backup_name, getContext());
+            result = Unfreezer().unfreeze(query.backup_name, getContext());
             break;
         }
         default:
             throw Exception("Unknown type of SYSTEM query", ErrorCodes::BAD_ARGUMENTS);
     }
 
-    return BlockIO();
+    return result;
 }
 
 void InterpreterSystemQuery::restoreReplica()
@@ -927,7 +929,7 @@ AccessRightsElements InterpreterSystemQuery::getRequiredAccessForDDLOnCluster() 
         case Type::START_LISTEN_QUERIES: break;
         case Type::STOP_THREAD_FUZZER: break;
         case Type::START_THREAD_FUZZER: break;
-        case Type::UNFREEZE: 
+        case Type::UNFREEZE:
         {
             required_access.emplace_back(AccessType::SYSTEM_UNFREEZE);
             break;

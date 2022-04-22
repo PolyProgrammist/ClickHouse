@@ -57,6 +57,12 @@ ${CLICKHOUSE_CLIENT} --query "ALTER TABLE table_for_freeze_old_syntax UNFREEZE P
   | ${CLICKHOUSE_LOCAL} --structure "$ALTER_OUT_STRUCTURE, $FREEZE_OUT_STRUCTURE" \
       --query "SELECT command_type, partition_id, part_name, backup_name FROM table"
 
+# Unfreeze the whole backup with SYSTEM query
+${CLICKHOUSE_CLIENT} --query "ALTER TABLE table_for_freeze FREEZE PARTITION '7' WITH NAME 'test_01417_single_part_7_system'"
+${CLICKHOUSE_CLIENT} --query "SYSTEM UNFREEZE WITH NAME 'test_01417_single_part_7_system'" \
+  | ${CLICKHOUSE_LOCAL} --structure "$ALTER_OUT_STRUCTURE, $FREEZE_OUT_STRUCTURE" \
+      --query "SELECT command_type, partition_id, part_name, backup_name FROM table"
+
 # teardown
 ${CLICKHOUSE_CLIENT} --query "DROP TABLE IF EXISTS table_for_freeze;"
 ${CLICKHOUSE_CLIENT} --query "DROP TABLE IF EXISTS table_for_freeze_old_syntax;"
