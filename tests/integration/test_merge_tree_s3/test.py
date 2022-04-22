@@ -546,9 +546,7 @@ def test_freeze_system_unfreeze(cluster, node_name):
     )
 
     # Unfreeze all data from backup3.
-    node.query(
-        "SYSTEM UNFREEZE WITH NAME 'backup3'"
-    )
+    node.query("SYSTEM UNFREEZE WITH NAME 'backup3'")
 
     # Data should be removed from S3.
     assert (

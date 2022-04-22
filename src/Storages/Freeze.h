@@ -31,7 +31,8 @@ public:
     String table_shared_id;
 };
 
-class Unfreezer {
+class Unfreezer
+{
 public:
     PartitionCommandsResultInfo unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, ContextPtr local_context);
     BlockIO unfreeze(const String& backup_name, ContextPtr local_context);

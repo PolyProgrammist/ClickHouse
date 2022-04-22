@@ -350,9 +350,12 @@ bool ParserSystemQuery::parseImpl(IParser::Pos & pos, ASTPtr & node, Expected & 
         case Type::UNFREEZE:
         {
             ASTPtr ast;
-            if (ParserKeyword{"WITH NAME"}.ignore(pos, expected) && ParserStringLiteral{}.parse(pos, ast, expected)) {
+            if (ParserKeyword{"WITH NAME"}.ignore(pos, expected) && ParserStringLiteral{}.parse(pos, ast, expected))
+            {
                 res->backup_name = ast->as<ASTLiteral &>().value.get<const String &>();
-            } else {
+            }
+            else
+            {
                 return false;
             }
             break;

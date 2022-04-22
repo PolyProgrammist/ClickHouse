@@ -563,7 +563,9 @@ def s3_zero_copy_drop_detached(cluster, unfreeze_query_template):
 
 
 def test_s3_zero_copy_drop_detached_alter(cluster):
-    s3_zero_copy_drop_detached(cluster, "ALTER TABLE drop_detached_test UNFREEZE WITH NAME")
+    s3_zero_copy_drop_detached(
+        cluster, "ALTER TABLE drop_detached_test UNFREEZE WITH NAME"
+    )
 
 
 def test_s3_zero_copy_drop_detached_system(cluster):
