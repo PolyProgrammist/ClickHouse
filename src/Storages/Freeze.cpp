@@ -1,9 +1,10 @@
 #include <Storages/Freeze.h>
 
+#include <Storages/PartitionCommands.h>
 #include <Common/escapeForFileName.h>
 #include <base/logger_useful.h>
 
-namespace DB 
+namespace DB
 {
 void FreezeMetaData::fill(const StorageReplicatedMergeTree & storage)
 {
@@ -73,7 +74,7 @@ String FreezeMetaData::getFileName(const String & path)
     return fs::path(path) / "frozen_metadata.txt";
 }
 
-void Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context) {
+ BlockIO Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context) {
     LOG_DEBUG(&Poco::Logger::get("Unfreezer"), "Unfreezing backup {}", backup_name);
     auto disksMap = local_context->getDisksMap();
     Disks disks;
@@ -83,6 +84,8 @@ void Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context) {
     auto backup_path = fs::path("shadow") / escapeForFileName(backup_name);
     auto store_path = backup_path / "store";
 
+    PartitionCommandsResultInfo result_info;
+
     for (auto disk: disks) {
         if (!disk->exists(store_path))
             continue;
@@ -90,13 +93,23 @@ void Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context) {
             auto prefix_directory = store_path / prefix_it->name();
             for (auto table_it = disk->iterateDirectory(prefix_directory); table_it->isValid(); table_it->next()) {
                 auto table_directory = prefix_directory / table_it->name();
-                unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, backup_name, disks, table_directory, local_context);
+                auto current_result_info = unfreezePartitionsFromTableDirectory([] (const String &) { return true; }, backup_name, {disk}, table_directory, local_context);
+                for (auto & command_result : current_result_info) {
+                    command_result.command_type = "SYSTEM UNFREEZE";
+                }
+                result_info.insert(result_info.end(), current_result_info.begin(), current_result_info.end());
             }
         }
         if (disk->exists(backup_path)) {
             disk->removeRecursive(backup_path);
         }
     }
+
+    BlockIO result;
+    if (!result_info.empty()) {
+        result.pipeline = QueryPipeline(convertCommandsResultToSource(result_info));
+    }
+    return result;
 }
 
 bool Unfreezer::removeFreezedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context)
