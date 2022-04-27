@@ -238,7 +238,7 @@ SYSTEM START MOVES [[db.]merge_tree_family_table_name]
 
 ### SYSTEM UNFREEZE {#query_language-system-unfreeze}
 
-Удаляет с диска все "замороженные" партиции данного бэкапа. Про удаление партиций по отдельности смотрите запрос [ALTER TABLE table_name UNFREEZE WITH NAME ](../partition.md#alter_unfreeze-partition)
+Удаляет с диска все "замороженные" партиции данного бэкапа. Про удаление партиций по отдельности смотрите запрос [ALTER TABLE table_name UNFREEZE WITH NAME ](alter/partition.md#alter_unfreeze-partition)
 
 ``` sql
 SYSTEM UNFREEZE WITH NAME <backup_name>

@@ -485,6 +485,7 @@ BlockIO InterpreterSystemQuery::execute()
         case Type::UNFREEZE:
         {
             getContext()->checkAccess(AccessType::SYSTEM_UNFREEZE);
+            /// The result contains information about deleted parts as a table. It is for compatibility with ALTER TABLE UNFREEZE query.
             result = Unfreezer().unfreeze(query.backup_name, getContext());
             break;
         }
