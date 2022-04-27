@@ -19,6 +19,7 @@
 #include <Parsers/ASTExpressionList.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/IAST_fwd.h>
+#include <Common/Macros.h>
 
 #include "registerTableFunctions.h"
 
@@ -65,7 +66,8 @@ void TableFunctionS3Cluster::parseArguments(const ASTPtr & ast_function, Context
         throw Exception(message, ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
     /// This arguments are always the first
-    configuration.cluster_name = args[0]->as<ASTLiteral &>().value.safeGet<String>();
+    auto cluster_name = args[0]->as<ASTLiteral &>().value.safeGet<String>();
+    configuration.cluster_name = context->getMacros()->expand(cluster_name);
 
     if (!context->tryGetCluster(configuration.cluster_name))
         throw Exception(ErrorCodes::BAD_GET, "Requested cluster '{}' not found", configuration.cluster_name);
