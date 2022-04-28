@@ -18,7 +18,6 @@
 #include <Parsers/ASTExpressionList.h>
 #include <Parsers/ASTFunction.h>
 #include <Parsers/IAST_fwd.h>
-#include <Common/Macros.h>
 
 #include "registerTableFunctions.h"
 
