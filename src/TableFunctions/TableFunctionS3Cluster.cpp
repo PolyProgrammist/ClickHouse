@@ -66,8 +66,7 @@ void TableFunctionS3Cluster::parseArguments(const ASTPtr & ast_function, Context
         throw Exception(message, ErrorCodes::NUMBER_OF_ARGUMENTS_DOESNT_MATCH);
 
     /// This arguments are always the first
-    auto cluster_name = args[0]->as<ASTLiteral &>().value.safeGet<String>();
-    configuration.cluster_name = context->getMacros()->expand(cluster_name);
+    configuration.cluster_name = args[0]->as<ASTLiteral &>().value.safeGet<String>();
 
     if (!context->tryGetCluster(configuration.cluster_name))
         throw Exception(ErrorCodes::BAD_GET, "Requested cluster '{}' not found", configuration.cluster_name);
