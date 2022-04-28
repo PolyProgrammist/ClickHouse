@@ -77,9 +77,9 @@ String FreezeMetaData::getFileName(const String & path)
 BlockIO Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context)
 {
     LOG_DEBUG(&Poco::Logger::get("Unfreezer"), "Unfreezing backup {}", backup_name);
-    auto disksMap = local_context->getDisksMap();
+    auto disks_map = local_context->getDisksMap();
     Disks disks;
-    for (auto& [name, disk]: disksMap)
+    for (auto& [name, disk]: disks_map)
     {
         disks.push_back(disk);
     }
@@ -88,7 +88,7 @@ BlockIO Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context)
 
     PartitionCommandsResultInfo result_info;
 
-    for (auto disk: disks)
+    for (const auto& disk: disks)
     {
         if (!disk->exists(store_path))
             continue;
