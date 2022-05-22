@@ -79,7 +79,7 @@ BlockIO Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context)
     LOG_DEBUG(&Poco::Logger::get("Unfreezer"), "Unfreezing backup {}", backup_name);
     auto disks_map = local_context->getDisksMap();
     Disks disks;
-    for (auto& [name, disk]: disks_map)
+    for (auto & [name, disk]: disks_map)
     {
         disks.push_back(disk);
     }
