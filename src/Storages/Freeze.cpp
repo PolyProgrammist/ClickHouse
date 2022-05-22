@@ -88,7 +88,7 @@ BlockIO Unfreezer::unfreeze(const String& backup_name, ContextPtr local_context)
 
     PartitionCommandsResultInfo result_info;
 
-    for (const auto& disk: disks)
+    for (const auto & disk: disks)
     {
         if (!disk->exists(store_path))
             continue;
