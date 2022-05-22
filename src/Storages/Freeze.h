@@ -24,8 +24,8 @@ private:
 
 public:
     int version = 1;
-    bool is_replicated;
-    bool is_remote;
+    bool is_replicated{false};
+    bool is_remote{false};
     String replica_name;
     String zookeeper_name;
     String table_shared_id;
