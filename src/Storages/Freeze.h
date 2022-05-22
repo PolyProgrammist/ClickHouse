@@ -34,7 +34,7 @@ public:
 class Unfreezer
 {
 public:
-    PartitionCommandsResultInfo unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, Disks disks, fs::path table_directory, ContextPtr local_context);
+    PartitionCommandsResultInfo unfreezePartitionsFromTableDirectory(MergeTreeData::MatcherFn matcher, const String & backup_name, const Disks & disks, const fs::path & table_directory, ContextPtr local_context);
     BlockIO unfreeze(const String& backup_name, ContextPtr local_context);
 private:
     static bool removeFreezedPart(DiskPtr disk, const String & path, const String &part_name, bool, ContextPtr local_context);
