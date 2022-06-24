@@ -26,11 +26,16 @@ void FreezeMetaData::save(DiskPtr data_disk, const String & path) const
 
     writeIntText(version, buffer);
     buffer.write("\n", 1);
-    writeBoolText(is_replicated, buffer);
-    buffer.write("\n", 1);
-    writeBoolText(is_remote, buffer);
-    buffer.write("\n", 1);
-    writeString(replica_name, buffer);
+    if (version == 1) {
+        /// is_replicated and is_remote are not used
+        bool is_replicated = true;
+        writeBoolText(is_replicated, buffer);
+        buffer.write("\n", 1);
+        bool is_remote = true;
+        writeBoolText(is_remote, buffer);
+        buffer.write("\n", 1);
+    }
+    writeString(escapeForFileName(replica_name), buffer);
     buffer.write("\n", 1);
     writeString(zookeeper_name, buffer);
     buffer.write("\n", 1);
@@ -51,17 +56,22 @@ bool FreezeMetaData::load(DiskPtr data_disk, const String & path)
     auto metadata_str = metadata_storage->readFileToString(file_path);
     ReadBufferFromString buffer(metadata_str);
     readIntText(version, buffer);
-    if (version != 1)
+    if (version < 1 or version > 2)
     {
         LOG_ERROR(&Poco::Logger::get("FreezeMetaData"), "Unknown freezed metadata version: {}", version);
         return false;
     }
     DB::assertChar('\n', buffer);
-    readBoolText(is_replicated, buffer);
-    DB::assertChar('\n', buffer);
-    readBoolText(is_remote, buffer);
-    DB::assertChar('\n', buffer);
-    readString(replica_name, buffer);
+    if (version == 1) {
+        /// is_replicated and is_remote are not used
+        bool is_replicated;
+        readBoolText(is_replicated, buffer);
+        DB::assertChar('\n', buffer);
+        bool is_remote;
+        readBoolText(is_remote, buffer);
+        DB::assertChar('\n', buffer);
+    }
+    readString(unescapeForFileName(replica_name), buffer);
     DB::assertChar('\n', buffer);
     readString(zookeeper_name, buffer);
     DB::assertChar('\n', buffer);
@@ -124,6 +134,7 @@ BlockIO Unfreezer::unfreeze(const String & backup_name, ContextPtr local_context
         }
         if (disk->exists(backup_path))
         {
+            /// After unfreezing we need to clear revision.txt file and empty directories
             disk->removeRecursive(backup_path);
         }
     }
@@ -143,11 +154,8 @@ bool Unfreezer::removeFreezedPart(DiskPtr disk, const String & path, const Strin
         FreezeMetaData meta;
         if (meta.load(disk, path))
         {
-            if (meta.is_replicated)
-            {
-                FreezeMetaData::clean(disk, path);
-                return StorageReplicatedMergeTree::removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", local_context);
-            }
+            FreezeMetaData::clean(disk, path);
+            return StorageReplicatedMergeTree::removeSharedDetachedPart(disk, path, part_name, meta.table_shared_id, meta.zookeeper_name, meta.replica_name, "", local_context);
         }
     }
 
